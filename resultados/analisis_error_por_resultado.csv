@@ -1,0 +1,4 @@
+result,partidos,Random Forest,Solo cuotas,Mercado
+Gana visitante (A),997,0.789,0.831,0.601
+Empate (D),691,0.644,0.671,0.389
+Gana local (H),1315,0.602,0.567,0.798

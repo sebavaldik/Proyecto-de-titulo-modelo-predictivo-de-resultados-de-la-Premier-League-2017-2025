@@ -1,0 +1,6 @@
+modelo,accuracy,roc_auc,log_loss,brier
+Random Forest — expansiva,0.6805,0.7207,0.6124,0.2119
+Random Forest — deslizante,0.6744,0.7182,0.6177,0.214
+Solo cuotas — expansiva,0.6858,0.7352,0.5979,0.2058
+Solo cuotas — deslizante,0.6896,0.7331,0.5995,0.2064
+Mercado (regla simple),0.6432,,,

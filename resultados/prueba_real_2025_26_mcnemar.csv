@@ -1,0 +1,5 @@
+A,B,solo_A_acierta,solo_B_acierta,dif_acc_pp,p_valor
+RF,Mercado,45,42,0.7958,0.8304
+Cuotas,Mercado,51,42,2.3873,0.4069
+RF,Cuotas,11,17,-1.5915,0.3449
+RF-wf,RF,6,3,0.7958,0.5078

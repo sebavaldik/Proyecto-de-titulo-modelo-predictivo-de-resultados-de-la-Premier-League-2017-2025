@@ -1,0 +1,6 @@
+tipo,partidos,local_gana,prob_media_modelo,RF,Cuotas,Mercado
+visitante muy favorito (<30%),723,0.192,0.281,0.808,0.808,0.808
+visitante favorito (30-45%),807,0.358,0.399,0.627,0.642,0.553
+parejo (45-60%),664,0.488,0.53,0.559,0.562,0.488
+local favorito (60-75%),487,0.649,0.678,0.647,0.649,0.649
+local muy favorito (>75%),322,0.767,0.786,0.767,0.767,0.767

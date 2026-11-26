@@ -1,0 +1,22 @@
+fold,modelo,logisticregression__C,estimator__max_depth,estimator__min_samples_leaf
+1,Solo cuotas,0.1,,
+1,Reg. Logística,0.01,,
+1,Random Forest (calibrado),,3.0,5.0
+2,Solo cuotas,0.1,,
+2,Reg. Logística,0.001,,
+2,Random Forest (calibrado),,3.0,5.0
+3,Solo cuotas,0.1,,
+3,Reg. Logística,0.01,,
+3,Random Forest (calibrado),,3.0,5.0
+4,Solo cuotas,0.1,,
+4,Reg. Logística,0.001,,
+4,Random Forest (calibrado),,3.0,5.0
+5,Solo cuotas,0.1,,
+5,Reg. Logística,0.01,,
+5,Random Forest (calibrado),,5.0,5.0
+6,Solo cuotas,0.1,,
+6,Reg. Logística,0.01,,
+6,Random Forest (calibrado),,12.0,10.0
+7,Solo cuotas,0.1,,
+7,Reg. Logística,0.01,,
+7,Random Forest (calibrado),,5.0,10.0

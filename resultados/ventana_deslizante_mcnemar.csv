@@ -1,0 +1,3 @@
+modelo,dif_accuracy_pp (deslizante - expansiva),solo_deslizante_acierta,solo_expansiva_acierta,p_McNemar,folds_donde_mejora (de 6 distintos),cumple_criterio
+Random Forest,-0.61,89,105,0.2815,2,False
+Solo cuotas,0.38,30,20,0.2026,5,False

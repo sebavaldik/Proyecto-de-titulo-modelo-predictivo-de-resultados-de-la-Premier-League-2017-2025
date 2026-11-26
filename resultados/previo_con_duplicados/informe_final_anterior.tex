@@ -1,0 +1,431 @@
+\documentclass{ieeeaccess}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+\history{}
+\doi{}
+
+\title{Modelo Predictivo de Resultados de Partidos de la Premier League (2017/2025)}
+\author{\uppercase{Anakin Benavides}\authorrefmark{1} and
+\uppercase{Sebastián Valdovinos}\authorrefmark{1}}
+\address[1]{Universidad Andrés Bello, Facultad de Ingeniería, Departamento de Ingeniería Civil Informática, Santiago, Chile}
+\tfootnote{Proyecto de Título --- Ingeniería Civil Informática. Profesor Guía: Pablo Hernán Schwarzenberg Riveros.}
+
+\markboth
+{Benavides and Valdovinos: Modelo Predictivo de Resultados de la Premier League}
+{Benavides and Valdovinos: Modelo Predictivo de Resultados de la Premier League}
+
+\corresp{Autor correspondiente: Anakin Benavides, Sebastian Valdovinos(e-mail: a.benavidesromero@uandresbello.edu, s.valdovinosbravo@uandresbello.edu).}
+
+\begin{abstract}
+Este proyecto desarrolla un modelo de aprendizaje de máquinas para predecir si el equipo local gana un partido de la Premier League (victoria local o no victoria local), a partir de datos históricos de las temporadas 2017/2018 a 2024/2025. Se construyó un conjunto de datos con estadísticas de partidos, métricas de planteles y señales del mercado de apuestas, del cual se derivaron variables de forma reciente, historial de enfrentamientos, calidad del plantel y rendimiento de porteros. Se compararon seis algoritmos de clasificación supervisada con validación temporal de ventana expansiva (7 folds) y optimización de hiperparámetros. El mejor modelo, Gradient Boosting, alcanzó un accuracy de 74,65\% y un ROC-AUC de 0,804, 11,68 puntos porcentuales sobre el baseline del mercado de apuestas (62,97\%). La selección de variables con RFECV redujo 58 candidatas a 11, y un análisis sin cuotas mostró una caída promedio de solo 2,39 puntos porcentuales, lo que indica valor predictivo propio. El análisis de interpretabilidad con valores SHAP identificó la racha invicta del visitante y la probabilidad implícita del mercado como los factores más influyentes. Se discuten limitaciones del conjunto de datos y del diseño experimental que deben corregirse antes de generalizar los resultados.
+\end{abstract}
+
+\begin{keywords}
+aprendizaje de máquinas, Gradient Boosting, interpretabilidad SHAP, mercado de apuestas, predicción de fútbol, Premier League, validación temporal
+\end{keywords}
+
+\titlepgskip=-15pt
+
+\maketitle
+
+\section{Introducción}
+\label{sec:introduction}
+\PARstart{L}{a} predicción de resultados deportivos ha experimentado un crecimiento exponencial en la última década, impulsado por la disponibilidad masiva de datos estadísticos y el avance de las técnicas de aprendizaje de máquinas (\textit{machine learning}). En particular, el fútbol de élite ---y la Premier League inglesa como su exponente más popular a nivel mundial--- genera millones de datos por temporada: estadísticas de partidos, métricas individuales de jugadores, datos de rendimiento físico y señales del mercado de apuestas, entre otros.
+
+En este contexto, el presente proyecto de título tiene como propósito central desarrollar un modelo predictivo capaz de anticipar el resultado de partidos de la Premier League, utilizando técnicas supervisadas de aprendizaje de máquinas y un conjunto de datos histórico construido especialmente para este fin. El período de análisis abarca ocho temporadas completas (2017/2018 a 2024/2025).
+
+La motivación radica en la brecha entre los sistemas de predicción de la literatura ---mayoritariamente basados en estadísticas básicas como goles y puntos acumulados--- y la riqueza de datos contextuales disponibles hoy: forma reciente, características del plantel, rendimiento de los porteros y señales implícitas del mercado de apuestas. La hipótesis central es que incorporar estas variables mejora la capacidad predictiva respecto de enfoques clásicos y del mercado de apuestas como \textit{benchmark}.
+
+El trabajo se estructura así: contexto del problema (Sección~\ref{sec:contexto}), objetivos (Sección~\ref{sec:objetivos}), estado del arte (Sección~\ref{sec:estado}), ingeniería del proyecto (Sección~\ref{sec:ingenieria}), resultados (Sección~\ref{sec:resultados}), discusión y limitaciones (Sección~\ref{sec:discusion}) y conclusiones (Sección~\ref{sec:conclusiones}).
+
+\section{Contexto del Problema}
+\label{sec:contexto}
+
+\subsection{La Premier League como objeto de estudio}
+La Premier League es una de las ligas de fútbol profesional más seguidas del mundo. Cada temporada se disputan 380 partidos entre 20 clubes, lo que genera un volumen considerable de datos estadísticos, económicos y deportivos. Su alta competitividad incrementa la incertidumbre de los resultados y genera una tasa natural de resultados impredecibles que ningún modelo puede eliminar por completo.
+
+\subsection{Complejidad del problema de predicción}
+Predecir el resultado de un partido es un problema de clasificación binaria (victoria local vs. no victoria local) con tres características particulares:
+\begin{itemize}
+\item \textbf{Alta variabilidad intrínseca:} incluso entre equipos de calidad similar, el resultado depende de factores difícilmente cuantificables, como el estado físico de jugadores clave, las condiciones climatológicas o las decisiones tácticas.
+\item \textbf{Distribución de clases desequilibrada:} en el conjunto de datos de este proyecto el local gana el 44,4\% de los partidos, lo que dificulta predecir correctamente las victorias visitantes.
+\item \textbf{Dependencia temporal:} el rendimiento de los equipos evoluciona durante la temporada; un modelo que no respete el orden cronológico incurre en \textit{data leakage} y sobreestima su desempeño real.
+\end{itemize}
+La variable objetivo (\texttt{target\_home\_win}) es binaria: vale 1 si el equipo local gana y 0 en caso contrario.
+
+\subsection{Relevancia del mercado de apuestas como benchmark}
+Las cuotas de las casas de apuestas resumen la información pública disponible sobre cada partido y son un referente exigente: tanto Baboota y Kaur~\cite{baboota2019predictive} como Ridall et al.~\cite{ridall2025bayesian} reportan que sus modelos no superaron a las casas de apuestas medido con RPS. En este proyecto el \textit{baseline} del mercado se define como la predicción binaria derivada de las probabilidades implícitas de las cuotas y alcanza un accuracy de 62,97\%; la literatura reporta accuracies de 50 a 78\% para predicción de resultados~\cite{ricogonzalez2023ml}.
+
+\section{Objetivos del Proyecto}
+\label{sec:objetivos}
+
+\subsection{Objetivo general}
+Desarrollar un modelo de aprendizaje de máquinas capaz de predecir el resultado (victoria local o no victoria local) de partidos de la Premier League, a partir de datos históricos de las temporadas 2017/2018 a 2024/2025, superando el desempeño del mercado de apuestas como referencia de comparación.
+
+\subsection{Objetivos específicos}
+\begin{enumerate}
+\item Recolectar, limpiar y consolidar datos históricos de partidos desde la temporada 2017/2018 a 2024/2025, incluyendo estadísticas de rendimiento, calidad de planteles y cuotas del mercado de apuestas.
+\item Diseñar e implementar un proceso de \textit{feature engineering} que capture la forma reciente de los equipos (ventana móvil de 5 partidos), el historial de enfrentamientos directos, la calidad del plantel y el rendimiento de porteros.
+\item Entrenar y comparar seis algoritmos de clasificación supervisada (Gradient Boosting, Random Forest, Regresión Logística, SVM RBF, MLP y red neuronal en PyTorch) con validación temporal y optimización de hiperparámetros.
+\item Evaluar el desempeño con accuracy, F1-Score, ROC-AUC y Brier Score, y compararlo con el \textit{baseline} del mercado.
+\item Aplicar análisis de interpretabilidad (importancia Gini, de permutación y valores SHAP) para identificar los factores más relevantes de la predicción.
+\item Documentar el proceso completo en un informe académico formal.
+\end{enumerate}
+
+\section{Estado del Arte}
+\label{sec:estado}
+
+\subsection{Panorama general de la predicción en fútbol}
+Los primeros trabajos ---predominantes en la década de 2000--- usaban modelos estadísticos clásicos como la regresión de Poisson y los modelos de Dixon-Coles para estimar la distribución de goles. Desde 2015, el acceso a datos más ricos y el desarrollo de algoritmos de \textit{ensemble learning} provocaron un giro hacia enfoques de \textit{machine learning}, con Gradient Boosting y Random Forest como los métodos más reportados~\cite{ricogonzalez2023ml}. La revisión identifica dos paradigmas: la clasificación directa del resultado mediante ML supervisado, y el enfoque probabilístico-estadístico basado en modelos de conteo de goles y sistemas dinámicos de estado.
+
+\subsection{Trabajos analizados}
+La Tabla~\ref{tab:literatura} resume los diez trabajos revisados.
+
+\begin{table*}[!t]
+\caption{Comparación de trabajos revisados: liga, dataset, resultado y aporte principal}
+\label{tab:literatura}
+\setlength{\tabcolsep}{2pt}
+\footnotesize
+\begin{tabular}{@{}p{3.2cm}p{2.2cm}p{3.4cm}p{2.6cm}p{4.6cm}@{}}
+\toprule
+\textbf{Referencia} & \textbf{Liga} & \textbf{Dataset} & \textbf{Mejor resultado} & \textbf{Limitación / aporte} \\
+\midrule
+Vujčić et al. (2026)~\cite{vujcic2026supervised} & EPL (fbref.com) & 2.292 registros equipo-partido; corte 1-ene-2022 & RF: 77,01\% (promedio por equipo) & 7 algoritmos; modelos por equipo; un único corte temporal \\
+Ajulo y Tiamiyu (2026)~\cite{ajulo2026ml} & EPL 2021--2025 & 5 temporadas, football-data.co.uk; 3 clases & RF: 87,14\%; AUC 99\% & Partición temporal 70/15/15; variables del propio partido (posible fuga) \\
+Ravichandran y Sani (2026)~\cite{ravichandran2026framework} & EPL, éxito de equipo por temporada & Kaggle, jugadores 1992--2019 & GB; F1 $\approx$ 1,00 & Estudio piloto (preprint); no predice partidos; SHAP \\
+Chowdary (2026)~\cite{chowdary2026dynamic} & IPL (cricket) + EPL & IPL 2018--2024 (457); EPL 2001--2025 (9.380) & IPL: 54,3\% $>$ Elo ($p=0{,}003$); EPL: 67,7\% $\approx$ Elo & Matrices de probabilidad relativa; preprint \\
+Ridall et al. (2025)~\cite{ridall2025bayesian} & EPL 1992--2024 & Entrena 1992/93--2009/10; test 2010/11--2023/24 & RPS acum. 17,55 & Bayesiano estado-espacio; ninguno superó a las cuotas \\
+Howell et al. (2026)~\cite{howell2026winning} & Premier League 2 & 367 partidos (303 train, 64 test), Wyscout & Reg. log.: 58,3\%; AUC 0,771 (test) & KPIs en liga de reservas \\
+Sjöberg (2023)~\cite{sjoborg2023football} & Bundesliga 2015--16 & 219 partidos útiles (de 306); atributos FIFA & Reg. log.: 63,0\% (3 clases) & Bajo volumen; partición aleatoria 70/30 \\
+Rico-González et al. (2023)~\cite{ricogonzalez2023ml} & Revisión sistemática & 32 estudios & RF, DT, KNN: 50--78\% & Baja reproducibilidad \\
+Li y Hong (2022)~\cite{li2022football} & Fútbol (liga no especificada) & Test de 10 partidos & Red BP: 80\% (KNN 40\%, LR 60\%) & Edge computing; muestra de test mínima \\
+Baboota y Kaur (2019)~\cite{baboota2019predictive} & EPL & 2005--2016; test 2014--2016; 3 clases & GB: RPS 0,2156 (cuotas: 0,2012) & Ratings FIFA; sin porteros; no superó a las cuotas \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\textbf{Vujčić et al.}~\cite{vujcic2026supervised} es el trabajo más comparable en liga y algoritmos: scrapean fbref.com y evalúan siete clasificadores (regresión logística, Naive Bayes, árbol de decisión, k-NN, Random Forest, AdaBoost y MLP) con variables como xG, xGA y posesión. Dividen los datos por fecha (1.160 registros antes del 1 de enero de 2022 para entrenar y 1.132 después para evaluar), pero entrenan modelos por equipo y reportan la accuracy promedio entre equipos: 77,01\% para Random Forest y 63,79\% para k-NN. \textbf{Ajulo y Tiamiyu}~\cite{ajulo2026ml} comparan Random Forest, XGBoost y LightGBM sobre cinco temporadas (2021--2025) de football-data.co.uk con partición temporal 70/15/15; reportan 87,14\% de accuracy y AUC de 99\%, pero sus variables incluyen goles, tiros, córners, faltas y tarjetas del propio partido, lo que sugiere fuga de información y explicaría cifras tan altas. \textbf{Ravichandran y Sani}~\cite{ravichandran2026framework} presentan un estudio piloto (preprint sin revisión por pares) con CRISP-DM~\cite{wirth2000crisp}: clasifican el \textit{éxito de un equipo en la temporada} a partir de estadísticas de jugadores de Kaggle, con regresión logística, Random Forest y Gradient Boosting, y aplican SHAP a nivel de equipo y de jugador; no predicen resultados de partidos. \textbf{Chowdary}~\cite{chowdary2026dynamic} propone la Dynamic Relative Probability Matrix (RPM) para cricket IPL (457 partidos, 2018--2024), donde supera a Elo con 54,3\% frente a 50,98\% (McNemar $p=0{,}0034$); en la Premier League (9.380 partidos, 2001/02--2024/25) RPM logra 67,71\%, estadísticamente equivalente a Elo (67,75\%, $p=0{,}98$), por lo que el autor no afirma superioridad en esa liga. \textbf{Ridall et al.}~\cite{ridall2025bayesian} formulan un modelo Bayesiano de estado-espacio con fortalezas ofensivas y defensivas dinámicas; entrenan con 1992/93--2009/10 y evalúan con 2010/11--2023/24 (RPS acumulado 17,55 relativo a las cuotas), y ninguno de sus modelos superó a las predicciones de las casas de apuestas. \textbf{Howell et al.}~\cite{howell2026winning} usan regresión logística con eliminación hacia atrás por AIC sobre 367 partidos de la PL2 (303 de 2022--24 para entrenar y 64 de 2025 para evaluar) e identifican disparos a puerta, pases hacia atrás e intercepciones como predictores robustos (58,3\% y AUC 0,771 en el conjunto de prueba). \textbf{Sjöberg}~\cite{sjoborg2023football} compara Naive Bayes, regresión logística y Random Forest sobre la Bundesliga 2015--2016: tras depurar datos nulos quedan 219 de los 306 partidos y usa una partición aleatoria 70/30; el mejor modelo (regresión logística con seis atributos de equipo) alcanza 63,0\% en tres clases y el promedio de los modelos ronda el 50\%. \textbf{Rico-González et al.}~\cite{ricogonzalez2023ml} revisan 32 estudios (145 identificados) siguiendo PRISMA, agrupados en lesiones (7), rendimiento (21) y talento (5); los clasificadores más considerados son árboles de decisión, Random Forest y SVM. \textbf{Li y Hong}~\cite{li2022football} proponen una arquitectura de \textit{edge computing} con k-NN, regresión logística y una red neuronal BP, con 40\%, 60\% y 80\% de aciertos, pero sobre solo 10 partidos de prueba, por lo que sus cifras no son concluyentes. \textbf{Baboota y Kaur}~\cite{baboota2019predictive} usan Gradient Boosting sobre la misma liga con ratings FIFA y estadísticas de partido (entrenan 2005--2014, evalúan 2014--2016, tres clases): RPS de 0,2156 frente a 0,2012 de Bet365 y Pinnacle, es decir, no superaron a las casas de apuestas; el conjunto de variables no incluye estadísticas de porteros.
+
+\subsection{Síntesis y brechas identificadas}
+Del análisis comparativo se identifican cuatro brechas que este proyecto aborda:
+\begin{enumerate}
+\item \textbf{Validación temporal repetida:} varios trabajos usan un único corte cronológico (Vujčić et al., Ajulo y Tiamiyu, Howell et al., Baboota y Kaur), y solo Ridall et al. y Chowdary evalúan de forma secuencial en múltiples temporadas; otros, como Sjöberg, usan particiones aleatorias. Aquí se usa validación de ventana expansiva con 7 temporadas de test.
+\item \textbf{Riqueza del conjunto de variables:} ningún trabajo revisado combina forma \textit{rolling}, historial H2H, métricas de plantel, rendimiento de porteros y señales del mercado; este proyecto las incorpora conjuntamente.
+\item \textbf{\textit{Benchmark} de mercado explícito:} solo Ridall et al. y Baboota y Kaur comparan contra las cuotas (con RPS, y sin superarlas). Aquí el \textit{baseline} del mercado (62,97\% de accuracy) se incorpora desde el inicio y se evalúa además un escenario sin cuotas.
+\item \textbf{Interpretabilidad SHAP por partido:} Ravichandran y Sani aplican SHAP al éxito de equipos por temporada, pero ninguno de los trabajos revisados lo usa para explicar partidos individuales; aquí se hace en la Sección~\ref{sec:shap}.
+\end{enumerate}
+
+\section{Ingeniería del Proyecto}
+\label{sec:ingenieria}
+
+\subsection{Arquitectura general de la solución}
+El proyecto se estructura como un \textit{pipeline} de ciencia de datos de seis etapas:
+\begin{enumerate}
+\item \textbf{Recolección y limpieza:} consolidación de resultados, estadísticas de partidos y cuotas en un único conjunto de datos (FBref vía \texttt{soccerdata} y football-data.co.uk).
+\item \textbf{Feature engineering:} construcción de variables de forma reciente, \textit{head-to-head}, calidad de plantel y porteros.
+\item \textbf{Análisis exploratorio (EDA):} distribuciones, correlaciones y selección preliminar de variables.
+\item \textbf{Selección de variables:} reducción de dimensionalidad con RFECV e importancia.
+\item \textbf{Modelado y evaluación:} seis modelos con validación temporal, optimización de hiperparámetros y comparación de métricas.
+\item \textbf{Interpretabilidad:} importancia Gini, de permutación y valores SHAP.
+\end{enumerate}
+
+\subsection{Descripción del dataset}
+El conjunto principal (\texttt{model\_dataset\_enriched.csv}) contiene 3.634 registros de partidos de las temporadas 2017--2018 a 2024--2025 y 98 columnas. La variable objetivo muestra un leve desbalance: 1.612 victorias locales (44,4\%) y 2.022 no victorias (55,6\%) (Figura~\ref{fig:balance}). Las columnas se agrupan en cuatro categorías: (1) forma reciente en ventana móvil de 5 partidos (\texttt{home/away\_roll\_*}); (2) estadísticas acumuladas de temporada (\texttt{home/away\_season\_*}); (3) historial de enfrentamientos directos (\texttt{h2h\_*}); y (4) variables del mercado de apuestas y derivadas de jugadores (\texttt{odds\_*}, \texttt{diff\_squad\_*}, \texttt{diff\_gk\_*}). No hay valores nulos tras la imputación. Para evitar fuga de información, las métricas de jugadores de cada partido provienen de la temporada anterior, y los equipos sin historial reciben la mediana de la liga.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.45\textwidth]{figuras/eda/balance_clases.png}
+\caption{Balance de clases de \texttt{target\_home\_win}.}
+\label{fig:balance}
+\end{figure}
+
+\subsection{Feature engineering}
+La construcción de variables fue iterativa, en tres versiones:
+\begin{itemize}
+\item \textbf{v1 (base):} forma \textit{rolling} (5 partidos), estadísticas de temporada y \textit{head-to-head}; replican y extienden las de Baboota y Kaur~\cite{baboota2019predictive}.
+\item \textbf{v2 (reducción + interacción):} eliminación de variables redundantes por alta correlación ($r>0{,}85$) y creación de interacciones como \texttt{streak\_clash} (choque de rachas invictas) y \texttt{market\_form\_diff} (diferencia entre forma real e implícita del mercado).
+\item \textbf{v3 (+jugadores):} calidad del plantel (\texttt{diff\_player\_quality}), edad media (\texttt{diff\_squad\_age}), porteros (\texttt{diff\_gk\_save\_pct}, \texttt{diff\_gk\_cs\_pct}), entradas ganadas (\texttt{diff\_team\_tkl\_per90}) e intercepciones (\texttt{diff\_team\_int\_per90}) por 90 minutos.
+\end{itemize}
+La Figura~\ref{fig:top_features} muestra el top-20 de variables por correlación de Pearson con el objetivo.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.45\textwidth]{figuras/eda/top_predictores.png}
+\caption{Top-20 variables por correlación absoluta de Pearson con \texttt{target\_home\_win}.}
+\label{fig:top_features}
+\end{figure}
+
+\subsection{Selección de variables}
+Tras eliminar fuga de información (resultado, goles, identificadores) y redundancia (variables altamente correlacionadas, cuotas crudas, variables individuales de jugadores sustituidas por sus diferencias), quedaron 58 variables candidatas. Se aplicó \textit{Recursive Feature Elimination with Cross-Validation} (RFECV) con \texttt{TimeSeriesSplit} de 3 folds y Gradient Boosting como estimador base; el óptimo fue de \textbf{11 variables} (Figura~\ref{fig:rfecv}): \texttt{odds\_home\_prob}, \texttt{home\_roll\_home\_points}, \texttt{away\_unbeaten\_streak}, \texttt{away\_season\_goals\_against}, \texttt{diff\_season\_gd}, \texttt{diff\_squad\_age}, \texttt{diff\_team\_tkl\_per90}, \texttt{diff\_team\_int\_per90}, \texttt{market\_form\_diff}, \texttt{streak\_clash} y \texttt{market\_uncertainty}. El F1 de validación cruzada con 11 variables fue de 0,6844.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.45\textwidth]{figuras/feature_selection/rfecv_curve.png}
+\caption{Curva de RFECV: número óptimo de variables seleccionadas (11).}
+\label{fig:rfecv}
+\end{figure}
+
+\subsection{Modelos evaluados}
+Se evaluaron seis algoritmos~\cite{geron2022hands}: \textbf{Gradient Boosting} (boosting secuencial de árboles débiles), \textbf{Random Forest} (\textit{bagging} de árboles con submuestreo de variables), \textbf{Regresión Logística}, \textbf{SVM con kernel RBF}, \textbf{MLP} de scikit-learn y una \textbf{red neuronal en PyTorch} (arquitectura $n\!\rightarrow\!256\!\rightarrow\!128\!\rightarrow\!64\!\rightarrow\!32\!\rightarrow\!1$ con BatchNorm, Dropout y \textit{early stopping}).
+
+\subsection{Validación temporal y optimización}
+Se usó validación de ventana expansiva (\textit{expanding window}) con 7 folds: el fold $k$ entrena con las primeras $k$ temporadas y evalúa en la siguiente (Fold 1: entrenamiento 2017--18, test 2018--19; \dots; Fold 7: entrenamiento 2017--24, test 2024--25). Los hiperparámetros se optimizaron con \texttt{GridSearchCV} y \texttt{TimeSeriesSplit} interno de 3 folds, con F1 como métrica; la red PyTorch se ajustó manualmente sobre tres configuraciones. Los modelos sensibles a la escala usan \texttt{StandardScaler} ajustado solo con el entrenamiento de cada fold.
+
+\subsection{Métricas de evaluación}
+Se usaron accuracy, F1-Score (útil ante el leve desbalance), ROC-AUC (capacidad discriminativa) y Brier Score (calibración; menor es mejor). El \textit{baseline} del mercado se obtuvo de las probabilidades implícitas de las cuotas y alcanzó un accuracy de 62,97\%.
+
+\subsection{Distribución del trabajo}
+La Tabla~\ref{tab:tareas} resume las tareas realizadas por integrante hasta el primer informe.
+
+\begin{table}[!t]
+\caption{Tareas completadas por integrante (primer informe)}
+\label{tab:tareas}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}p{1.9cm}p{1.7cm}p{4.2cm}@{}}
+\toprule
+\textbf{Responsable} & \textbf{Área} & \textbf{Tarea} \\
+\midrule
+Anakin Benavides & Datos & Recolección, limpieza y consolidación del dataset \\
+Anakin Benavides & Feature Eng. & Forma \textit{rolling}, rachas, features de jugadores y porteros \\
+Anakin Benavides & EDA & Distribuciones, correlaciones y top features \\
+Anakin Benavides & Modelado & Pipeline de validación temporal \\
+Sebastián Valdovinos & Modelado & Entrenamiento de los 6 modelos; iteración de versiones v1--v3 \\
+Sebastián Valdovinos & Evaluación & Métricas, importancia Gini y baseline del mercado \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Resultados}
+\label{sec:resultados}
+
+\subsection{Resultados sin optimización de hiperparámetros}
+La Tabla~\ref{tab:baseline} presenta las métricas iniciales de los seis modelos sin optimización, con partición cronológica 80/20 (727 partidos de test).
+
+\begin{table}[!t]
+\caption{Métricas en el conjunto de test sin optimización}
+\label{tab:baseline}
+\centering
+\footnotesize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Acc.} & \textbf{F1} & \textbf{AUC} & \textbf{Brier} \\
+\midrule
+Gradient Boosting & 73,73\% & 0,6757 & 0,7914 & 0,1820 \\
+Random Forest & 73,59\% & 0,6923 & 0,7999 & 0,1828 \\
+Red neuronal PyTorch & 70,84\% & 0,6307 & 0,7723 & 0,1885 \\
+MLP (sklearn) & 70,98\% & 0,6613 & 0,7701 & 0,1941 \\
+Reg. Logística & 70,29\% & 0,6561 & 0,7677 & 0,1967 \\
+SVM (RBF) & 71,11\% & 0,6645 & 0,7663 & 0,1928 \\
+\midrule
+\textbf{Baseline mercado} & \textbf{62,97\%} & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Todos los modelos superan al \textit{baseline} del mercado por entre 7 y 11 puntos porcentuales. La Figura~\ref{fig:roc} muestra las curvas ROC.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.45\textwidth]{figuras/modelos/curvas_roc.png}
+\caption{Curvas ROC comparativas de los modelos sin optimización.}
+\label{fig:roc}
+\end{figure}
+
+\subsection{Resultados con optimización de hiperparámetros}
+La Tabla~\ref{tab:tuning} presenta los resultados finales promediados sobre los 7 folds (media $\pm$ desviación estándar).
+
+\begin{table}[!t]
+\caption{Resultados finales con optimización de hiperparámetros (7 folds)}
+\label{tab:tuning}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Acc.} & \textbf{F1} & \textbf{AUC} & \textbf{Brier} \\
+\midrule
+Gradient Boosting & 74,65 $\pm$ 2,9\% & 0,702 $\pm$ 0,063 & 0,804 $\pm$ 0,034 & 0,179 \\
+Random Forest & 74,20 $\pm$ 2,9\% & 0,705 $\pm$ 0,062 & 0,806 $\pm$ 0,035 & 0,178 \\
+Red neuronal PyTorch & 72,26 $\pm$ 2,2\% & 0,680 $\pm$ 0,050 & 0,786 $\pm$ 0,024 & 0,186 \\
+Reg. Logística & 70,60 $\pm$ 1,3\% & 0,677 $\pm$ 0,045 & 0,769 $\pm$ 0,017 & 0,196 \\
+SVM (RBF) & 70,72 $\pm$ 3,0\% & 0,680 $\pm$ 0,059 & 0,762 $\pm$ 0,037 & 0,196 \\
+MLP (sklearn) & 69,04 $\pm$ 3,3\% & 0,631 $\pm$ 0,051 & 0,760 $\pm$ 0,040 & 0,207 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Random Forest y Gradient Boosting son los mejores modelos: accuracy superior a 74\% y ROC-AUC superior a 0,80, con diferencias entre ambos menores que la desviación entre folds. Gradient Boosting obtiene el mayor accuracy (74,65\%, 11,68 puntos sobre el \textit{baseline}) y Random Forest el mayor ROC-AUC. La Figura~\ref{fig:comparacion_final} compara las métricas y la Figura~\ref{fig:folds} muestra su evolución por fold, que refleja la variabilidad entre temporadas.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.48\textwidth]{figuras/tuning/comparacion_final.png}
+\caption{Comparación final de modelos (promedio de 7 folds) frente al \textit{baseline} del mercado.}
+\label{fig:comparacion_final}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.48\textwidth]{figuras/tuning/evolucion_folds.png}
+\caption{Evolución de F1-Score y ROC-AUC por fold de validación.}
+\label{fig:folds}
+\end{figure}
+
+\subsection{Importancia de variables}
+En los modelos de árboles, \texttt{away\_unbeaten\_streak} (racha consecutiva sin derrota del visitante) es la variable de mayor importancia Gini, seguida de la probabilidad implícita del mercado y de las variables de racha y forma (Figura~\ref{fig:feature_importance}); en el modelo sin cuotas la misma variable lidera con 0,2105, seguida de \texttt{diff\_season\_gd} (0,1473). Este resultado es consistente con la literatura, donde Vujčić et al.~\cite{vujcic2026supervised} y Ajulo y Tiamiyu~\cite{ajulo2026ml} también identifican variables de forma reciente como las más influyentes.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.48\textwidth]{figuras/tuning/feature_importance.png}
+\caption{Importancia de variables (Gini) para Random Forest y Gradient Boosting.}
+\label{fig:feature_importance}
+\end{figure}
+
+\subsection{Análisis sin variables de mercado}
+Se eliminaron tres variables de mercado (\texttt{odds\_home\_prob}, \texttt{market\_form\_diff}, \texttt{market\_uncertainty}) para evaluar si el modelo depende de las cuotas (Tabla~\ref{tab:sin_odds}, Figura~\ref{fig:sin_odds}).
+
+\begin{table}[!t]
+\caption{Accuracy con y sin variables de mercado (promedio de 7 folds, hiperparámetros fijos)}
+\label{tab:sin_odds}
+\centering
+\footnotesize
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Modelo} & \textbf{Con odds} & \textbf{Sin odds} & \textbf{Caída} \\
+\midrule
+Random Forest & 74,46\% & 72,14\% & $-$2,32 pp \\
+Gradient Boosting & 72,02\% & 68,41\% & $-$3,61 pp \\
+SVM (RBF) & 70,84\% & 68,78\% & $-$2,06 pp \\
+Reg. Logística & 70,60\% & 68,20\% & $-$2,40 pp \\
+MLP (sklearn) & 69,85\% & 68,30\% & $-$1,55 pp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.48\textwidth]{figuras/sin_odds/comparacion_odds.png}
+\caption{Impacto de eliminar las variables de mercado sobre accuracy, F1 y ROC-AUC.}
+\label{fig:sin_odds}
+\end{figure}
+
+La caída promedio de accuracy es de 2,39 puntos porcentuales (moderada: entre 2 y 5 puntos), por lo que el modelo mantiene valor predictivo propio pero cierta dependencia del mercado. Sin cuotas, Random Forest alcanza 72,14\%, unos 9 puntos sobre el \textit{baseline}. Los valores con odds difieren de la Tabla~\ref{tab:tuning} porque aquí se usan hiperparámetros fijos, no optimizados por fold.
+
+\subsection{Variables de bajo impacto}
+Cinco variables mostraron importancia de permutación baja o negativa (\texttt{diff\_season\_gd}, \texttt{market\_form\_diff}, \texttt{diff\_squad\_age}, \texttt{diff\_team\_tkl\_per90} y \texttt{diff\_team\_int\_per90}). Combinando tres criterios (Gini, permutación y coeficientes de regresión logística), dos variables resultaron candidatas a eliminar. Su eliminación empeoró el F1 (Figura~\ref{fig:elimination}), por lo que se conservaron las 11 variables.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.45\textwidth]{figuras/features_negativos/elimination_impact.png}
+\caption{Impacto sobre el F1-Score de eliminar cada variable candidata.}
+\label{fig:elimination}
+\end{figure}
+
+\subsection{Interpretabilidad con valores SHAP}
+\label{sec:shap}
+Los valores SHAP~\cite{lundberg2017unified} descomponen cada predicción en contribuciones aditivas de cada variable, $f(x)=\phi_0+\sum_{j}\phi_j$, donde $\phi_0$ es el valor base y $\phi_j$ el aporte de la variable $j$ en log-odds. Se aplicó \texttt{TreeExplainer} a Gradient Boosting: en cada fold el modelo se entrenó solo con el pasado y los valores se calcularon sobre la temporada de test, de modo que la explicación refleja el comportamiento fuera de muestra. La Tabla~\ref{tab:shap} y la Figura~\ref{fig:shap_global} muestran la importancia global.
+
+\begin{table}[!t]
+\caption{Importancia global SHAP (media de $|\phi|$, promedio $\pm$ desv. est. entre 7 folds)}
+\label{tab:shap}
+\centering
+\footnotesize
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Variable} & \textbf{Media $|$SHAP$|$} \\
+\midrule
+\texttt{away\_unbeaten\_streak} & 0,823 $\pm$ 0,170 \\
+\texttt{odds\_home\_prob} & 0,547 $\pm$ 0,155 \\
+\texttt{streak\_clash} & 0,302 $\pm$ 0,108 \\
+\texttt{home\_roll\_home\_points} & 0,287 $\pm$ 0,052 \\
+\texttt{away\_season\_goals\_against} & 0,287 $\pm$ 0,170 \\
+\texttt{diff\_season\_gd} & 0,279 $\pm$ 0,123 \\
+\texttt{market\_uncertainty} & 0,246 $\pm$ 0,125 \\
+\texttt{market\_form\_diff} & 0,204 $\pm$ 0,062 \\
+\texttt{diff\_squad\_age} & 0,150 $\pm$ 0,075 \\
+\texttt{diff\_team\_int\_per90} & 0,137 $\pm$ 0,064 \\
+\texttt{diff\_team\_tkl\_per90} & 0,135 $\pm$ 0,064 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.45\textwidth]{figuras/shap/importancia_global.png}
+\caption{Importancia global SHAP de Gradient Boosting (promedio de 7 folds).}
+\label{fig:shap_global}
+\end{figure}
+
+El ranking SHAP coincide con la importancia Gini: \texttt{away\_unbeaten\_streak} es la variable dominante y \texttt{odds\_home\_prob} la segunda. El gráfico \textit{beeswarm} (Figura~\ref{fig:beeswarm}) muestra el sentido del efecto: una racha invicta corta del visitante empuja la predicción hacia la victoria local y una larga la empuja en contra; una mayor probabilidad implícita del mercado y más puntos recientes del local como tal aumentan la probabilidad de victoria local. Las variables de plantel (edad, entradas e intercepciones) aportan poco individualmente.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.48\textwidth]{figuras/shap/beeswarm.png}
+\caption{SHAP \textit{beeswarm}: efecto de cada variable sobre la predicción en las 7 temporadas de test.}
+\label{fig:beeswarm}
+\end{figure}
+
+A nivel de partido, la Figura~\ref{fig:waterfall_err} muestra un error de alta confianza de la temporada 2024--25: el modelo asignó 0,94 de probabilidad de victoria local porque el visitante no tenía racha invicta, la cuota favorecía al local y el visitante acumulaba muchos goles recibidos; el local no ganó. El caso ilustra que el modelo no incorpora información contextual no estructurada (lesiones, rotaciones, motivación).
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.48\textwidth]{figuras/shap/waterfall_error_confiado.png}
+\caption{Explicación SHAP de un error de alta confianza (temporada 2024--25).}
+\label{fig:waterfall_err}
+\end{figure}
+
+\section{Discusión y Limitaciones}
+\label{sec:discusion}
+
+\subsection{Comparación con la literatura}
+El accuracy de 74,65\% de Gradient Boosting es inferior al 77,01\% de Vujčić et al.~\cite{vujcic2026supervised}, pero ese valor es un promedio entre modelos por equipo con otras variables y un único corte temporal, por lo que no es directamente comparable. Supera el 63,0\% de Sjöberg~\cite{sjoborg2023football}, aunque ese estudio usa tres clases, 219 partidos y una partición aleatoria. Las cifras de Ajulo y Tiamiyu~\cite{ajulo2026ml} (87,14\%) deben tomarse con cautela porque sus variables incluyen estadísticas del propio partido. Ridall et al.~\cite{ridall2025bayesian} y Baboota y Kaur~\cite{baboota2019predictive} usan RPS sobre tres clases, métrica no comparable con el accuracy binario de este trabajo.
+
+Un matiz importante: ambos estudios concluyen que sus modelos no superan a las casas de apuestas. En este proyecto el \textit{baseline} del mercado es una regla binaria sobre las probabilidades implícitas, y los modelos con cuotas como variable de entrada la superan en 11,68 puntos de accuracy, lo que no equivale a superar al mercado en calibración probabilística. El escenario sin cuotas (Tabla~\ref{tab:sin_odds}), que sigue superando al \textit{baseline}, es la evidencia más independiente del mercado.
+
+\subsection{Validación temporal}
+La validación de ventana expansiva garantiza que cada fold se evalúe sobre datos futuros respecto del entrenamiento, y la desviación entre folds (alrededor de 3 puntos de accuracy) cuantifica la variabilidad entre temporadas.
+
+\subsection{Limitaciones del estudio}
+\begin{enumerate}
+\item \textbf{Calidad del conjunto de datos:} la unión entre FBref y football-data.co.uk produjo filas duplicadas: el conjunto tiene 3.634 registros, mientras que ocho temporadas de 380 partidos suman 3.040 partidos reales. Hay registros con la misma fecha y equipos pero cuotas distintas. Esto puede alterar las métricas reportadas y debe corregirse antes de generalizar; las cifras de este informe deben leerse con esa salvedad.
+\item \textbf{Selección de variables:} RFECV se aplicó sobre el conjunto completo de datos, por lo que la elección de las 11 variables pudo usar información de temporadas posteriores a algunos folds de test. Una selección anidada dentro de cada fold evitaría este sesgo optimista.
+\item \textbf{\textit{Baseline} de mercado:} las probabilidades implícitas se calcularon como $1/\text{cuota}$ sin normalizar el margen de la casa, y no se reportó RPS ni pruebas de significancia (por ejemplo McNemar) frente al mercado.
+\item \textbf{Red neuronal PyTorch:} el \textit{early stopping} usó el conjunto de test como validación, lo que favorece levemente a este modelo.
+\item \textbf{Desbalance de clases:} el 44,4\% de victorias locales puede afectar la predicción de victorias visitantes; el problema se redujo a binario y no distingue empates.
+\item \textbf{Variables contextuales ausentes:} lesiones, clima, cambios de entrenador y motivación.
+\item \textbf{Ventana temporal:} ocho temporadas pueden no capturar cambios estructurales de largo plazo.
+\end{enumerate}
+
+\section{Conclusiones}
+\label{sec:conclusiones}
+Este proyecto muestra que es posible predecir si el equipo local gana un partido de la Premier League con un accuracy de 74,65\% (Gradient Boosting) y un ROC-AUC de 0,804, 11,68 puntos porcentuales sobre el \textit{baseline} del mercado de apuestas, bajo una validación temporal estricta. Los objetivos específicos se cumplieron así:
+\begin{enumerate}
+\item Se construyó un conjunto de datos consolidado de ocho temporadas, con las salvedades de calidad indicadas en la Sección~\ref{sec:discusion}.
+\item Se diseñó un proceso de \textit{feature engineering} con forma reciente, H2H, plantel y porteros, y RFECV redujo 58 candidatas a 11 variables.
+\item Se compararon seis algoritmos con validación de ventana expansiva y optimización de hiperparámetros; los modelos de árboles superan a los demás.
+\item Se evaluó con accuracy, F1, ROC-AUC y Brier frente al \textit{baseline} del mercado; sin cuotas, el modelo conserva valor predictivo (caída promedio de 2,39 puntos).
+\item El análisis de interpretabilidad (Gini, permutación y SHAP global y por partido) identificó \texttt{away\_unbeaten\_streak} como predictor dominante, seguido de la probabilidad implícita del mercado.
+\item Se documentó el proceso completo en este informe.
+\end{enumerate}
+
+Como trabajo futuro se propone: (i) corregir los duplicados del conjunto de datos, realizar la selección de variables dentro de cada fold y repetir los experimentos; (ii) normalizar las cuotas, incorporar RPS y pruebas de significancia; (iii) optimizar una red neuronal con una búsqueda automática de arquitectura (por ejemplo Keras Tuner) con validación interna cronológica; (iv) extender SHAP a interacciones; (v) incorporar lesiones, suspensiones y cambios de entrenador; (vi) explorar modelos de secuencia (LSTM, Transformers); y (vii) evaluar la generalización a otras ligas europeas.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\EOD
+
+\end{document}

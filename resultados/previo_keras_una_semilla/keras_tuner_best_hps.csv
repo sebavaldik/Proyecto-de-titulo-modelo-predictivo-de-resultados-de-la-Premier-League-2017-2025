@@ -1,0 +1,8 @@
+fold,activation,batch_norm,dropout,l2,n_layers,units_0,learning_rate,optimizer,units_1,units_2,batch_size,balanced_weights
+1,elu,False,0.2,1e-05,3,16,0.0024213008585778108,adamw,16,16,32,False
+2,relu,False,0.30000000000000004,1e-05,3,64,0.0006045439190544825,adam,16,16,32,False
+3,relu,False,0.4,1e-05,3,96,0.0001794727335353696,adam,128,80,32,False
+4,swish,False,0.4,1e-05,1,16,0.01,rmsprop,112,64,128,False
+5,swish,False,0.1,1.750942941667167e-05,1,16,0.0006951671294413008,rmsprop,80,112,64,False
+6,swish,False,0.4,1e-05,3,16,0.01,adam,128,112,32,True
+7,swish,False,0.1,3.3139772722489574e-05,1,32,0.0018776396901022114,rmsprop,112,80,32,False

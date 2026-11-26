@@ -1,0 +1,12 @@
+{
+ "filas_model_dataset": 3709,
+ "filas_enriched": 3634,
+ "columnas_enriched": 98,
+ "duplicados_enriched": 674,
+ "victorias_locales_pct": 44.36,
+ "baseline_mercado_acc": 0.6297,
+ "gb_acc": 0.7465,
+ "gb_auc": 0.8039,
+ "rf_acc": 0.742,
+ "rf_auc": 0.8062
+}

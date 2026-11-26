@@ -1,0 +1,5 @@
+{
+ "accuracy": 0.6425661914460286,
+ "n_partidos": 2946,
+ "definicion": "predice victoria local si P(local) > P(visitante), con P = 1/cuota B365; se excluyen partidos con probabilidades iguales"
+}

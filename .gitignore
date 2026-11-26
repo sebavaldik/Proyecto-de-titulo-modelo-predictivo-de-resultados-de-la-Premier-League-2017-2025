@@ -1,0 +1,40 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Archivos temporales de Office / sistema ---
+~$*
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# --- Artefactos pesados que se regeneran al reejecutar los notebooks ---
+# (modelos entrenados por fold y proyectos de Keras Tuner)
+resultados/models/*
+!resultados/models/.gitkeep
+resultados/models_keras/
+resultados/keras_tuner/
+*.pkl
+*.pt
+*.keras
+*.h5
+
+# --- Compilación LaTeX ---
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.synctex.gz
+
+# --- Papers de terceros (PDF con derechos de autor) ---
+# Si el repositorio es PÚBLICO, descomenta la línea siguiente para no publicarlos.
+# Si es PRIVADO y solo lo verá el profesor, puedes dejarla comentada.
+Documento Tesis/Papers/

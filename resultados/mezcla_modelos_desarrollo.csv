@@ -1,0 +1,5 @@
+modelo,log_loss,roc_auc,brier,accuracy,dif_logloss_vs_cuotas
+Solo cuotas,0.5969,0.7342,0.2051,0.6905,0.0
+Reg. Logística,0.61,0.7319,0.2106,0.6865,0.0131
+Random Forest (calibrado),0.6073,0.726,0.2093,0.6798,0.0104
+Mezcla A (promedio simple),0.6008,0.7352,0.2065,0.6831,0.0039

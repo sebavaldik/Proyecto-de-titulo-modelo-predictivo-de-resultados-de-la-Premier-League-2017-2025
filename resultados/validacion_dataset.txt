@@ -1,0 +1,34 @@
+
+1. matches_combined.csv (cruce FBref + football-data)
+-----------------------------------------------------
+[OK ] 3.040 partidos (8 temporadas x 380) — 3040 filas
+[OK ] 380 partidos por temporada — {'2017-2018': 380, '2018-2019': 380, '2019-2020': 380, '2020-2021': 380, '2021-2022': 380, '2022-2023': 380, '2023-2024': 380, '2024-2025': 380}
+[OK ] Sin partidos repetidos por (temporada, local, visitante)
+[OK ] Ningún equipo juega dos partidos el mismo día
+[OK ] Las cuotas pertenecen al partido correcto (equipos coinciden)
+[OK ] Marcador FBref == marcador football-data
+[OK ] 'result' coherente con los goles
+[OK ] Cuotas B365 completas y > 1
+[OK ] Fechas == fechas de matches_fbref.csv
+[OK ] Cada fecha cae dentro de su temporada (ago año1 - ago año2) — 0 fuera de rango
+
+2. model_dataset.csv (variables rolling)
+----------------------------------------
+[OK ] Sin partidos repetidos — 3019 filas
+[OK ] Fecha == fecha real del partido (sin día/mes invertidos) — 0 distintas
+[OK ] month == mes de la fecha
+[OK ] day_of_week == día de la semana
+[OK ] is_weekend coherente
+[OK ] odds_home/draw/away == cuotas B365 de ese partido
+[OK ] home: roll_goals_scored, roll_points y unbeaten_streak == recálculo independiente solo con partidos anteriores
+[OK ] away: roll_goals_scored, roll_points y unbeaten_streak == recálculo independiente solo con partidos anteriores
+
+3. model_dataset_enriched.csv (entrada de los modelos)
+------------------------------------------------------
+[OK ] Sin partidos repetidos — 2973 filas x 98 columnas
+[OK ] Sin valores nulos
+[OK ] target_home_win == (result == 'H')
+Filas por temporada: 2017-2018=347, 2018-2019=371, 2019-2020=371, 2020-2021=377, 2021-2022=377, 2022-2023=377, 2023-2024=376, 2024-2025=377
+
+Victorias locales: 44.23 %  |  filas: 2973
+RESULTADO GLOBAL: TODOS LOS CONTROLES OK

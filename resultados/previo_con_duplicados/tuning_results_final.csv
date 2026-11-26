@@ -1,0 +1,7 @@
+model,accuracy_mean,accuracy_std,f1_score_mean,f1_score_std,roc_auc_mean,roc_auc_std,brier_score_mean,brier_score_std
+Random Forest,0.742,0.0288,0.7048,0.0621,0.8062,0.0351,0.1783,0.0135
+Gradient Boosting,0.7465,0.0293,0.7015,0.0627,0.8039,0.0339,0.1793,0.0115
+Red Neuronal (PyTorch),0.7226,0.022,0.6795,0.0501,0.7863,0.0241,0.1858,0.0095
+Regresión Logística,0.706,0.0133,0.677,0.0448,0.7692,0.0166,0.1963,0.0058
+SVM (RBF),0.7072,0.0305,0.6796,0.0592,0.7622,0.0369,0.1958,0.0128
+MLP (sklearn),0.6904,0.0326,0.631,0.0514,0.7601,0.0398,0.2071,0.025

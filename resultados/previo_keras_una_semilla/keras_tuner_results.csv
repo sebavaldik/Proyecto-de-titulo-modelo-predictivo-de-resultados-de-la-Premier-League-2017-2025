@@ -1,0 +1,2 @@
+model,accuracy_mean,accuracy_std,f1_score_mean,f1_score_std,roc_auc_mean,roc_auc_std,brier_score_mean,brier_score_std
+Red Neuronal (Keras Tuner),0.6333,0.0998,0.5624,0.0854,0.6799,0.1063,0.2269,0.0374

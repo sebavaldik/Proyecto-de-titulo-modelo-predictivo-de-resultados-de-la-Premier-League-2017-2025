@@ -1,0 +1,7 @@
+variante,mejora_logloss_prom,folds_mejora,p_Wilcoxon,dif_accuracy_pp,cumple_criterio
+M1,-0.0001,3 de 7,0.3223,0.15,False
+M2,-0.0001,3 de 7,0.6932,0.11,False
+M3,0.0038,7 de 7,0.0001,0.61,True
+M5,-0.0,5 de 7,0.6573,0.19,False
+M6,-0.0001,3 de 7,0.3085,0.0,False
+M4,0.001,4 de 7,0.8,0.15,False

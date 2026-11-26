@@ -1,0 +1,7 @@
+Modelo,Accuracy,Precision,Recall,F1-Score,ROC-AUC,Brier
+Red Neuronal (PyTorch),0.6571,0.5822,0.6969,0.6344,0.7454,0.204
+Regresión Logística,0.6655,0.5841,0.752,0.6575,0.7415,0.2116
+Random Forest,0.6723,0.6065,0.6614,0.6328,0.7322,0.2095
+MLP (sklearn),0.6739,0.6172,0.622,0.6196,0.7321,0.2108
+SVM (RBF),0.6639,0.5877,0.7126,0.6441,0.7208,0.2123
+Gradient Boosting,0.6555,0.5992,0.5827,0.5908,0.706,0.2206

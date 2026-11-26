@@ -1,0 +1,6 @@
+modelo,accuracy,ic95_inf,ic95_sup,f1,roc_auc,brier,log_loss,aciertos
+Random Forest,0.6127,0.5627,0.6605,0.535,0.6725,0.224,0.6355,231
+Random Forest (walk-forward),0.6207,0.5707,0.6682,0.5517,0.669,0.225,0.6376,234
+Solo cuotas,0.6286,0.5788,0.6759,0.5425,0.6971,0.2157,0.6186,237
+Solo cuotas (walk-forward),0.6286,0.5788,0.6759,0.5425,0.6964,0.2157,0.6187,237
+Mercado (regla simple),0.6048,0.5546,0.6528,0.6266,,,,228
